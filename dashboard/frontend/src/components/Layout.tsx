@@ -110,7 +110,7 @@ export function AppShell({ children, runs, timeRange, setTimeRange }: {
           <div className="account"><span className="account__avatar">ST</span><span className="account__label">SENTINEL</span></div>
         </div>
       </header>
-      {IS_DEMO && <div className="demo-banner"><span className="demo-banner__dot" /> <strong>Demo data</strong> — illustrative traces and evaluation figures. No simulator or defense is connected yet.</div>}
+      {IS_DEMO ? <div className="demo-banner"><span className="demo-banner__dot" /> <strong>Demo data</strong> — illustrative traces and evaluation figures. No simulator or defense is connected yet.</div> : <div className="demo-banner"><span className="demo-banner__dot" /> <strong>Recorded artifacts</strong> — real simulator decisions and evaluations; sensitive text is redacted server-side. Module scores and model identity are shown only if recorded.</div>}
       <main id="main-content" className="page-content">{children}</main>
     </div>
   </div>;

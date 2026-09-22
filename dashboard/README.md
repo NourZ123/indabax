@@ -1,121 +1,125 @@
-# SENTINEL dashboard — frontend MVP
+# SENTINEL Security Dashboard — integrated MVP
 
-A React + Vite + TypeScript frontend designed to live alongside the existing SENTINEL simulator and `my-defense` folder. The approved design is a restrained, Cloudflare-inspired light security console with **dot-and-text decisions (no pills)**. See `design-reference.png` for the original approved visual reference.
+This folder contains the previously approved Cloudflare-inspired React interface **plus a new read-only FastAPI adapter** that reads saved artifacts from the official SENTINEL simulator. It does not alter `my-defense/` or the official simulator.
 
-**Current scope:** frontend only. The application launches with **clearly marked synthetic demonstration data**. The charts, example evaluation percentages and demonstration scenario outcomes are **not benchmark measurements**. No simulator, LLM or live defense is connected until the dashboard backend is implemented.
-
-## Integrate into your existing repo
-
-Extract the ZIP **at the root of** `NourZ123/indabax` so that you have:
+## Architecture
 
 ```text
 indabax/
-├── my-defense/
-├── src/sentinel/
-├── scenarios/
-├── policies/
-└── dashboard/
-    ├── design-reference.png
-    ├── README.md
-    └── frontend/
-        ├── src/
-        ├── package.json
-        └── vite.config.ts
+  my-defense/                     existing decision service :8080
+  src/sentinel/                   official simulator; do not modify
+  policies/                        official YAML policy definitions
+  scenarios/                       scenario titles + allowed tool lists
+  artifacts/                       created by `sentinel run/eval`
+  dashboard/
+    backend/                       read-only FastAPI adapter :8090
+    frontend/                      React + Vite :5173
+    design-reference.png           approved visual reference
 ```
 
-**Do not replace or merge any files under `my-defense/`.** This is a self-contained frontend addition.
+Data flow: simulator saves **JSONL events**, `*.summary.json` outcomes and `scorecards/*.json` evaluations → dashboard backend normalizes and redacts → frontend `/api/dashboard` via Vite's proxy. The defense service on `:8080` remains entirely independent.
 
-## Run locally on Pop!_OS
+## 1. Add it to your branch
 
-Requires Node.js 20+ and an internet connection for the initial npm dependency installation.
+Extract the integrated ZIP **at the root of your existing `indabax/` checkout**. It contains only `dashboard/`. If you already extracted the earlier frontend ZIP, the new ZIP replaces those frontend files with the API-compatible version and adds `dashboard/backend/`.
 
 ```bash
-cd indabax/dashboard/frontend
-npm install
-npm run dev
-```
-
-Open **http://127.0.0.1:5173**. Initially, the app redirects to the illustrative `RUN-042` trace, matching your approved screenshot.
-
-```bash
-npm run build       # strict TypeScript check and production Vite build
-npm run preview     # preview the compiled production app
-npm run typecheck   # TypeScript only
-```
-
-The frontend dev server uses **5173**, while your defense service can continue using **8080**. They do not interfere. No backend is required to see and interact with demo pages.
-
-## Implemented pages
-
-- **Overview:** time-filtered metrics, daily decision activity, domain coverage, recent runs and recent interventions.
-- **Runs:** filter/search run list, clickable trace rows, action inspector with Details / Defense analysis / Provenance / Raw data, step navigation, decision filters, risk bars, decision distribution, Summary / Artifacts / Evaluator tabs and JSON/CSV exports.
-- **Evaluations:** experiment comparison table, baseline/ablation filters, task-utility vs. attack-success bars, downloadable CSV.
-- **Policies:** Enterprise / Finance / SOC selection, permission table, confirmation requirements, rule inspector, related decision signals. **Read-only.**
-- **Incidents:** a filterable queue of blocked, escalated and rewritten actions.
-- **Data & Artifacts:** downloadable normalized demonstration run records.
-- **Playground:** editable JSON request and parser; does not fabricate defense decisions in demo mode. A future backend may implement POST `/api/playground`.
-- **Settings:** local table-density preference and connection guidance.
-
-Global search matches run IDs, scenario names and tool names. The global time-range selector filters run-based pages. All action statuses use a small colored dot plus plain text, as requested.
-
-## Future backend connection
-
-The frontend is deliberately decoupled from the existing defense API. **Do not send run-history or evaluation UI traffic through `POST /v1/decision`.** Keep decision enforcement and dashboard observability separate.
-
-When a dashboard FastAPI adapter exists, expose:
-
-```text
-GET /api/dashboard
-```
-
-It should return the `DashboardData` structure from `frontend/src/types/sentinel.ts`:
-
-```json
-{
-  "runs": [],
-  "policies": [],
-  "experiments": []
-}
-```
-
-Use `frontend/src/data/demo.ts` only as an example of the expected field shapes. The real backend should parse saved SENTINEL traces/evaluation artifacts, record explicit outcome values and report missing fields as `null` rather than guessing. Scenario-effective permissions can differ from general policy files.
-
-To switch to API mode:
-
-```bash
-cd dashboard/frontend
-cp .env.example .env
-# Edit .env:
-# VITE_DASHBOARD_MODE=api
-npm run dev
-```
-
-Vite proxies `/api` to `http://127.0.0.1:8090` in development. The backend on that port **does not exist in this frontend-only delivery**.
-
-Optional future endpoint for the Playground:
-
-```text
-POST /api/playground
-```
-
-## Security and correctness requirements for integration
-
-- **Redact credentials and restricted values on the backend**, before placing traces into browser-visible API responses. The frontend's demo redactions are not a substitute for backend sanitization.
-- Never infer `attack_success` or `task_success` from a single block or allow decision. Ingest authoritative simulator/evaluator outcomes.
-- Keep action risk scores distinct from measured evaluation outcomes; missing signals must be represented as missing.
-- The frontend JSON and CSV exports operate on the records loaded into the browser. CSV export escapes cells beginning with common spreadsheet formula characters.
-- The selected Policies environment shows illustrative, general policy data. Do not present it as the exact `policy_context` of every scenario.
-
-## Suggested Git workflow
-
-From the repository root, after extraction:
-
-```bash
+cd ~/path/to/indabax
 git switch defense-v2
 git switch -c dashboard-mvp
+unzip -o ~/Downloads/sentinel-dashboard-integrated.zip -d .
+```
+
+If you already created `dashboard-mvp`, just `git switch dashboard-mvp`; don't create it twice. Review `git diff` before committing.
+
+## 2. Run the defense (terminal A)
+
+```bash
+cd ~/path/to/indabax/my-defense
+uvicorn app.main:app --host 127.0.0.1 --port 8080
+```
+
+Use the virtual environment/dependencies you already installed for the defense. The dashboard does not require this service simply to display previously recorded runs.
+
+## 3. Generate a real trace (terminal B)
+
+From the **repository root**:
+
+```bash
+cd ~/path/to/indabax
+uv sync
+uv run sentinel run \
+  --scenario scenarios/public/enterprise/enterprise_poisoned_invoice.yaml \
+  --defense-url http://127.0.0.1:8080 \
+  --model mock \
+  --artifacts artifacts
+```
+
+The official simulator writes `artifacts/<unique-group>/<run-id>.jsonl` and a matching `artifacts/<unique-group>/<run-id>.summary.json`. The dashboard reads those files; it doesn't need Qwen3-8B or Hugging Face.
+
+## 4. Run the dashboard backend (terminal C)
+
+From the **repository root** (its `pyproject.toml` already has FastAPI, Uvicorn and PyYAML):
+
+```bash
+uv run uvicorn dashboard.backend.app:app --host 127.0.0.1 --port 8090
+```
+
+Check `http://127.0.0.1:8090/api/healthz` and `http://127.0.0.1:8090/api/dashboard`. If you saved artifacts elsewhere, set `SENTINEL_ARTIFACTS_DIR` before starting Uvicorn, e.g. `SENTINEL_ARTIFACTS_DIR=/absolute/path/to/artifacts uv run uvicorn dashboard.backend.app:app --host 127.0.0.1 --port 8090`.
+
+The read-only endpoints are:
+
+- `GET /api/dashboard` — all runs, domain policies and scorecard experiments
+- `GET /api/runs` and `GET /api/runs/{run_id}` — normalized runs
+- `GET /api/evaluations` — actual saved scorecards only
+- `GET /api/policies` — the repository's actual YAML policies
+- `GET /api/healthz` and `GET /api/docs` — health and API docs
+
+There is intentionally no endpoint for modifying policies, sending emails, executing tools or altering defense decisions. `Playground` remains a future feature; its POST endpoint is not included in this read-only MVP.
+
+## 5. Run the React frontend (terminal D)
+
+```bash
+cd ~/path/to/indabax/dashboard/frontend
+npm install
+cp .env.api.example .env
+npm run dev
+```
+
+Open **http://127.0.0.1:5173**. The frontend proxies `/api/` to port 8090. In API mode it defaults to **All time**, so deterministic simulator timestamps do not hide newly saved runs. To use illustrative data instead, change `.env` to `VITE_DASHBOARD_MODE=demo` and restart Vite.
+
+Once the UI is working, the `Runs` page should show your actual scenario, defense decisions, measured risk scores, reason codes and **defense latencies** (when a matching `.summary.json` exists). Select a row to open the decision inspector. `Evaluations` displays only saved `scorecards/*.json`; run `uv run sentinel eval public --defense-url http://127.0.0.1:8080 --artifacts artifacts` to populate it.
+
+## 6. Tests
+
+From the repository root:
+
+```bash
+uv run pytest -q dashboard/backend/tests
+cd dashboard/frontend
+npm run typecheck
+npm run build
+```
+
+The Python tests exercise the same JSONL event and `.summary.json` shapes emitted by the official simulator, with synthetic fixtures. For full end-to-end verification, record a real scenario, then inspect the dashboard's trace and compare it with the simulator's replay.
+
+## Data limitations and security
+
+- **Server-side redaction by default.** Arbitrary free text such as `body`, `content`, `query`, `subject`, tool results and defense explanations is not returned to the browser. Recipient local parts are masked; known synthetic record IDs and structured statuses may be displayed. Never publish `artifacts/` or expose the dashboard API publicly without authentication.
+- Real simulator `DEFENSE_DECISION` events record decision, risk, confidence, reason codes, original action and any rewrite. They **do not record** the defense's `metadata` containing per-module scores. The Risk Analysis bars correctly show “—” until you add an *explicit opt-in, redacted* metadata journal; this adapter does not invent signals.
+- The simulator logs a **logical clock**. Its event timestamps show ordering, not wall-clock step duration. The UI's trace “Defense latency” is evaluator-measured when a summary exists. Run duration, model identity and other unrecorded fields are shown as unavailable rather than guessed.
+- A failed attack is **not necessarily an attack blocked by the defense**. Actual evaluator summary outcomes populate `taskSuccess`, `attackSuccess`, `criticalViolation` and `dataFlowViolation` independently. A missing summary yields `not_evaluated` and `null` outcome flags.
+- Policy YAML contains **domain-wide rules**, not a blanket list of permitted tools. Permissions vary by scenario. The Run Summary tab also reads scenario-specific `allowed_tools`, `policy_profile` and `forbidden_effects` when its scenario YAML is available.
+- Official decision events do not include complete source-provenance records. The UI does **not** infer or fabricate source trust from action arguments.
+- Only HTTP `127.0.0.1` is recommended. The backend is local/read-only with no authentication in this hackathon MVP.
+
+## Commit
+
+```bash
 git add dashboard/
-git commit -m "Add SENTINEL frontend dashboard"
+git diff --staged
+git commit -m "Connect SENTINEL dashboard to real run artifacts"
 git push -u origin dashboard-mvp
 ```
 
-Create a PR from `dashboard-mvp` into `defense-v2` after local testing and team review.
+Open a pull request **from `dashboard-mvp` into `defense-v2`** after checking your actual run in the dashboard.

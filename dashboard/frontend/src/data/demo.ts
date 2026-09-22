@@ -242,11 +242,11 @@ const policies: PolicyDocument[] = [
 ];
 
 const experiments: Experiment[] = [
-  { id: 'full-v2', name: 'SENTINEL v2', kind: 'full', domain: 'all', totalScenarios: 19, legitimateTaskRate: 0.89, attackSuccessRate: 0.11, criticalViolationRate: 0.05, falseBlockRate: 0.07, unnecessaryEscalationRate: 0.12, averageLatencyMs: 22 },
-  { id: 'allow-all', name: 'Allow all', kind: 'baseline', domain: 'all', totalScenarios: 19, legitimateTaskRate: 0.96, attackSuccessRate: 0.69, criticalViolationRate: 0.41, falseBlockRate: 0, unnecessaryEscalationRate: 0, averageLatencyMs: 2 },
-  { id: 'keyword', name: 'Keyword monitor', kind: 'baseline', domain: 'all', totalScenarios: 19, legitimateTaskRate: 0.74, attackSuccessRate: 0.42, criticalViolationRate: 0.27, falseBlockRate: 0.23, unnecessaryEscalationRate: 0.09, averageLatencyMs: 7 },
-  { id: 'no-provenance', name: 'Without provenance', kind: 'ablation', domain: 'all', totalScenarios: 19, legitimateTaskRate: 0.91, attackSuccessRate: 0.29, criticalViolationRate: 0.17, falseBlockRate: 0.06, unnecessaryEscalationRate: 0.10, averageLatencyMs: 18 },
-  { id: 'no-info-flow', name: 'Without information flow', kind: 'ablation', domain: 'all', totalScenarios: 19, legitimateTaskRate: 0.90, attackSuccessRate: 0.38, criticalViolationRate: 0.23, falseBlockRate: 0.05, unnecessaryEscalationRate: 0.10, averageLatencyMs: 16 },
+  { id: 'full-v2', name: 'SENTINEL v2', kind: 'full', domain: 'all', totalScenarios: 19, legitimateTaskRate: 0.89, attackSuccessRate: 0.11, criticalViolationRate: 0.05, falseBlockRate: 0.07, unnecessaryEscalationRate: 0.12, medianLatencyMs: 22 },
+  { id: 'allow-all', name: 'Allow all', kind: 'baseline', domain: 'all', totalScenarios: 19, legitimateTaskRate: 0.96, attackSuccessRate: 0.69, criticalViolationRate: 0.41, falseBlockRate: 0, unnecessaryEscalationRate: 0, medianLatencyMs: 2 },
+  { id: 'keyword', name: 'Keyword monitor', kind: 'baseline', domain: 'all', totalScenarios: 19, legitimateTaskRate: 0.74, attackSuccessRate: 0.42, criticalViolationRate: 0.27, falseBlockRate: 0.23, unnecessaryEscalationRate: 0.09, medianLatencyMs: 7 },
+  { id: 'no-provenance', name: 'Without provenance', kind: 'ablation', domain: 'all', totalScenarios: 19, legitimateTaskRate: 0.91, attackSuccessRate: 0.29, criticalViolationRate: 0.17, falseBlockRate: 0.06, unnecessaryEscalationRate: 0.10, medianLatencyMs: 18 },
+  { id: 'no-info-flow', name: 'Without information flow', kind: 'ablation', domain: 'all', totalScenarios: 19, legitimateTaskRate: 0.90, attackSuccessRate: 0.38, criticalViolationRate: 0.23, falseBlockRate: 0.05, unnecessaryEscalationRate: 0.10, medianLatencyMs: 16 },
 ];
 
 export const demoData: DashboardData = { runs, policies, experiments };

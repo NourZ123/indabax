@@ -57,7 +57,7 @@ export function PlaygroundPage() {
 
 export function ArtifactsPage({ runs }: { runs: Run[] }) {
   return <div className="page-stack"><SectionHeading title="Data & Artifacts" description="Export saved run records and normalized decision traces." action={<DownloadButton label="Export all runs" onClick={() => downloadJSON('sentinel-runs.json', runs)} />} />
-    <Panel title="Available run exports"><p className="panel-subtitle">These are normalized frontend records. Original simulator JSONL artifacts will become available when the backend is connected.</p>
+    <Panel title="Available run exports"><p className="panel-subtitle">These are normalized frontend records. Original simulator JSONL artifacts remain on disk. This view exports redacted normalized records.</p>
       {runs.length === 0 ? <EmptyState title="No artifacts in range" description="Change the global time range to find older runs." /> : <div className="artifact-list">{runs.map((run) => <div className="artifact-row" key={run.id}>
         <FileJson size={25} className="artifact-icon" /><div><strong>{run.id.toLowerCase()}.json</strong><p><DomainLabel domain={run.domain} /> · {run.events.length} actions · {run.scenario}</p></div>
         <Outcome outcome={run.outcome} /><button className="button button--light" type="button" onClick={() => downloadJSON(`${run.id.toLowerCase()}.json`, run)}>Download</button>
@@ -80,6 +80,6 @@ export function SettingsPage() {
     <Panel title="Data connection"><div className="settings-block"><div className="connection-state"><span className={`connection-led ${IS_DEMO ? 'connection-led--demo' : ''}`} />{IS_DEMO ? 'Illustrative demo data' : 'Dashboard API mode'}</div>
       <p>{IS_DEMO ? 'The app is displaying local fixtures. No simulator, model or defense is currently connected.' : 'The frontend is loading records from the configured dashboard backend.'}</p>
       <div className="settings-endpoint"><Database size={17} /><code>GET /api/dashboard</code><button type="button" aria-label="Copy API contract" onClick={copy}><ClipboardCopy size={15} /></button>{copied && <small>Copied</small>}</div>
-      <p className="help-copy">Use .env to set VITE_DASHBOARD_MODE=api after implementing the dashboard backend. Restart Vite after changing environment variables.</p></div></Panel></div>
+      <p className="help-copy">Set VITE_DASHBOARD_MODE=api in .env and run the bundled read-only dashboard backend. Restart Vite after changing environment variables.</p></div></Panel></div>
   </div>;
 }

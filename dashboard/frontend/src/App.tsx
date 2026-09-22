@@ -14,14 +14,43 @@ function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+  const [timeRange, setTimeRange] = useState<TimeRange>(IS_DEMO ? '7d' : 'all');
   const visibleRuns = useMemo(() => filterRunsByTime(data?.runs ?? [], timeRange), [data, timeRange]);
   const reload = () => {
     setLoading(true); setError(null);
     getDashboardData().then(setData).catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load dashboard data.'))
       .finally(() => setLoading(false));
   };
-  useEffect(() => { reload(); }, []);
+  useEffect(() => {
+  // Initial data load
+  reload();
+
+  if (IS_DEMO) return;
+
+  let cancelled = false;
+
+  const interval = window.setInterval(async () => {
+    // Avoid unnecessary requests when the tab is in the background.
+    if (document.hidden) return;
+
+    try {
+      const updated = await getDashboardData();
+
+      if (!cancelled) {
+        // Update the dashboard without displaying a loading screen.
+        setData(updated);
+      }
+    } catch (error) {
+      // Keep the existing data if a refresh fails.
+      console.warn('Dashboard refresh failed:', error);
+    }
+  }, 5000);
+
+  return () => {
+    cancelled = true;
+    window.clearInterval(interval);
+  };
+}, []);
   if (loading) return <div className="app-loading"><div className="loading-mark" />Loading SENTINEL dashboard...</div>;
   if (error || !data) return <div className="app-loading"><div className="load-error"><EmptyState title="Data source unavailable" description={error || 'No dashboard data was returned.'} action={<button type="button" className="button button--primary" onClick={reload}>Retry</button>} /></div></div>;
   return <AppShell runs={data.runs} timeRange={timeRange} setTimeRange={setTimeRange}>

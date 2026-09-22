@@ -41,8 +41,8 @@ export function RunListPage({ runs }: { runs: Run[] }) {
       <div className="table-toolbar">
         <div className="inline-search"><Search size={16} aria-hidden="true" /><input placeholder="Search run ID or scenario" aria-label="Search runs" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
         <div className="table-toolbar__controls"><Filter size={16} className="toolbar-filter-icon" aria-hidden="true" />
-          <select className="select-control" aria-label="Filter domain" value={domain} onChange={(e) => setDomain(e.target.value)}><option value="all">All domains</option><option value="enterprise">Enterprise</option><option value="finance">Finance</option><option value="soc">SOC</option></select>
-          <select className="select-control" aria-label="Filter outcome" value={outcome} onChange={(e) => setOutcome(e.target.value)}><option value="all">All outcomes</option><option value="attack_blocked">Attack blocked</option><option value="attack_succeeded">Attack succeeded</option><option value="task_completed">Task completed</option><option value="task_incomplete">Task incomplete</option></select>
+          <select className="select-control" aria-label="Filter domain" value={domain} onChange={(e) => setDomain(e.target.value)}><option value="all">All domains</option><option value="enterprise">Enterprise</option><option value="finance">Finance</option><option value="soc">SOC</option><option value="unknown">Unknown</option></select>
+          <select className="select-control" aria-label="Filter outcome" value={outcome} onChange={(e) => setOutcome(e.target.value)}><option value="all">All outcomes</option><option value="attack_blocked">Attack blocked (demo)</option><option value="attack_failed">Attack failed</option><option value="not_evaluated">Not evaluated</option><option value="attack_succeeded">Attack succeeded</option><option value="task_completed">Task completed</option><option value="task_incomplete">Task incomplete</option></select>
         </div>
       </div>
       {matches.length === 0 ? <EmptyState title="No matching runs" description="Try a different search, domain or time range." /> : <div className="table-scroll">
@@ -92,7 +92,7 @@ function RunDetailsView({ run }: { run: Run }) {
         <MetricCard label="Allowed" value={counts.allow} color="var(--allowed)" trend={asPercent(counts.allow / (run.events.length || 1))} />
         <MetricCard label="Escalated" value={counts.escalate} color="var(--escalated)" trend={asPercent(counts.escalate / (run.events.length || 1))} />
         <MetricCard label="Blocked" value={counts.block} color="var(--blocked)" trend={asPercent(counts.block / (run.events.length || 1))} />
-        <MetricCard label="Total duration" value={formatDuration(run.durationMs)} />
+        <MetricCard label="Wall-clock duration" value={formatDuration(run.durationMs)} />
       </div>
       <div className="run-workspace">
         <Panel className="trace-panel" title="Execution trace" action={<select value={decisionFilter} className="select-control" aria-label="Filter trace decisions" onChange={(e) => setDecisionFilter(e.target.value as Decision | 'all')}>
@@ -100,9 +100,9 @@ function RunDetailsView({ run }: { run: Run }) {
         </select>}>
           <p className="panel-subtitle">Chronological list of agent actions and defense decisions.</p>
           {visibleSteps.length === 0 ? <EmptyState title="No steps in this category" description="Change the decision filter to inspect other actions." /> : <div className="table-scroll trace-table-scroll">
-            <table className="data-table trace-table"><thead><tr><th>#</th><th>Time</th><th>Action</th><th>Tool / Type</th><th>Decision</th><th>Duration</th></tr></thead>
+            <table className="data-table trace-table"><thead><tr><th>#</th><th>Time</th><th>Action</th><th>Tool / Type</th><th>Decision</th><th>Defense latency</th></tr></thead>
               <tbody>{visibleSteps.map((step) => <tr key={step.id} className={`trace-row ${selectedId === step.id ? 'trace-row--selected' : ''}`} onClick={() => setSelectedId(step.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(step.id); } }} tabIndex={0} aria-selected={selectedId === step.id}>
-                <td className="step-number"><span className={`step-indicator step-indicator--${step.decision}`} />{String(step.index).padStart(2, '0')}</td>
+                <td className="step-number"><span className={`step-indicator step-indicator--${step.decision}`} />{String(step.stepId ?? step.index).padStart(2, '0')}</td>
                 <td className="nowrap time-cell">{formatClock(step.occurredAt)}</td>
                 <td className="trace-description">{step.description}</td><td className="mono tool-cell">{step.tool}</td>
                 <td><StatusDot status={step.decision} /></td><td className="nowrap">{formatDuration(step.durationMs)}</td>
@@ -131,7 +131,7 @@ function DecisionInspector({ event, run, onPrevious, onNext }: { event: TraceEve
   const [copied, setCopied] = useState(false);
   const copy = async () => { try { await navigator.clipboard.writeText(JSON.stringify(event.arguments, null, 2)); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { setCopied(false); } };
   return <Panel className="inspector-panel">
-    <div className="inspector__heading"><h2>Step {String(event.index).padStart(2, '0')} — <span className={`text--${event.decision}`}>{event.decision === 'allow' ? 'Allowed' : event.decision === 'block' ? 'Blocked' : event.decision === 'escalate' ? 'Escalated' : 'Rewritten'}</span></h2>
+    <div className="inspector__heading"><h2>Step {String(event.stepId ?? event.index).padStart(2, '0')} — <span className={`text--${event.decision}`}>{event.decision === 'allow' ? 'Allowed' : event.decision === 'block' ? 'Blocked' : event.decision === 'escalate' ? 'Escalated' : 'Rewritten'}</span></h2>
       <div className="inspector__arrows"><button type="button" className="icon-button icon-button--border" aria-label="Previous action" disabled={event.index <= 1} onClick={onPrevious}><ChevronLeft size={18} /></button><button type="button" className="icon-button icon-button--border" aria-label="Next action" disabled={event.index >= run.events.length} onClick={onNext}><ChevronRight size={18} /></button></div>
     </div>
     <div className="inspector__subject"><div className="inspector__tool-icon"><ShieldAlert size={23} strokeWidth={1.7} /></div><div><h3 className="mono">{event.tool}</h3><p>{event.description}</p></div></div>
@@ -154,10 +154,10 @@ function DecisionInspector({ event, run, onPrevious, onNext }: { event: TraceEve
       </>}
       {tab === 'provenance' && <>
         <p className="panel-subtitle">Source trust and sensitivity attached to this recorded event.</p>
-        {event.provenance.length === 0 ? <EmptyState title="No provenance linked" description="The trace did not record linked sources for this action." /> :
+        {event.provenance.length === 0 ? <EmptyState title="No provenance linked" description="The official simulator does not include full provenance records on defense-decision events; no source trust is inferred." /> :
           <div className="provenance-list">{event.provenance.map((source) => <div className="provenance-item" key={source.id}><div className="provenance-item__top"><strong>{source.label}</strong><span className={`small-severity small-severity--${source.role}`}>{source.role}</span></div><dl><div><dt>Trust</dt><dd>{source.trustLevel.replaceAll('_', ' ')}</dd></div><div><dt>Sensitivity</dt><dd>{source.sensitivity}</dd></div></dl>{source.detail && <p>{source.detail}</p>}</div>)}</div>}
       </>}
-      {tab === 'raw' && <><p className="panel-subtitle">Raw frontend event record. The future backend must redact real credentials before exposing logs.</p><pre className="json-box json-box--large">{JSON.stringify(event, null, 2)}</pre><DownloadButton label="Download event JSON" onClick={() => downloadJSON(`${run.id}-step-${event.index}.json`, event)} /></>}
+      {tab === 'raw' && <><p className="panel-subtitle">Normalized event record. In API mode free-form content is redacted on the backend before entering your browser.</p><pre className="json-box json-box--large">{JSON.stringify(event, null, 2)}</pre><DownloadButton label="Download event JSON" onClick={() => downloadJSON(`${run.id}-step-${event.index}.json`, event)} /></>}
     </div>
   </Panel>;
 }
@@ -165,7 +165,7 @@ function DecisionInspector({ event, run, onPrevious, onNext }: { event: TraceEve
 function DataFlow({ event }: { event: TraceEvent }) {
   const sources = event.provenance.filter((record) => record.role === 'source');
   const target = event.provenance.find((record) => record.role === 'destination');
-  if (!target && sources.length === 0) return <p className="muted small-text">No source-to-destination flow recorded for this action.</p>;
+  if (!target && sources.length === 0) return <p className="muted small-text">No verified source-to-destination flow was logged for this action.</p>;
   return <div className="flow-visual"><div className="flow-node"><strong>{sources[0]?.label || 'Agent action'}</strong><span>{sources[0]?.sensitivity || 'Source'} · {sources[0]?.trustLevel.replaceAll('_', ' ') || 'Unknown'}</span></div><ArrowRight size={18} aria-hidden="true" /><div className="flow-node"><strong>{target?.label || event.tool}</strong><span>{target?.trustLevel.replaceAll('_', ' ') || 'Destination not recorded'}</span></div></div>;
 }
 
@@ -179,7 +179,7 @@ function DecisionDistribution({ counts, total }: { counts: Record<Decision, numb
 
 function RunSummary({ run }: { run: Run }) {
   return <div className="summary-grid"><Panel title="Investigation summary"><p className="summary-lead">{run.summary}</p><div className="summary-details"><Field label="User goal" value={run.userGoal} /><Field label="Scenario" value={<code>{run.scenario}</code>} /><Field label="Domain" value={<DomainLabel domain={run.domain} />} /><Field label="Defense" value={run.defenseVersion} /></div></Panel>
-    <Panel title="Recorded outcomes"><OutcomeList run={run} /></Panel>
+    <Panel title="Recorded outcomes"><OutcomeList run={run} />{run.effectivePolicy && <div className="inspect-section"><h4>Scenario-effective policy</h4><p className="small-text">Profile: {run.effectivePolicy.profile}</p><p className="small-text">Allowed tools: {run.effectivePolicy.allowedTools.length ? run.effectivePolicy.allowedTools.join(' · ') : 'Not recorded'}</p><p className="small-text">Forbidden effects: {run.effectivePolicy.forbiddenEffects.length ? run.effectivePolicy.forbiddenEffects.join(' · ') : 'None declared'}</p><p className="help-copy">Read from the selected scenario definition, not inferred from defense decisions.</p></div>}</Panel>
   </div>;
 }
 function OutcomeList({ run }: { run: Run }) {
@@ -187,8 +187,8 @@ function OutcomeList({ run }: { run: Run }) {
 }
 function RunArtifacts({ run }: { run: Run }) {
   const exportTrace = () => downloadJSON(`${run.id.toLowerCase()}-trace.json`, run.events);
-  return <Panel title="Recorded artifacts"><p className="panel-subtitle">Export the normalized frontend data for this run. Backend integration will add the simulator's original files and evaluator artifacts.</p>
-    <div className="artifact-list"><div className="artifact-row"><FileJson size={24} /><div><strong>Full run</strong><p>{run.id.toLowerCase()}.json · Run metadata and normalized trace</p></div><button className="button button--light" type="button" onClick={() => downloadJSON(`${run.id.toLowerCase()}.json`, run)}><Download size={15} /> Download</button></div>
+  return <Panel title="Recorded artifacts"><p className="panel-subtitle">Export the normalized frontend data for this run. Exports are redacted, normalized dashboard data. The original artifacts remain on the local filesystem.</p>
+    <div className="artifact-list"><div className="artifact-row"><FileJson size={24} /><div><strong>Full run</strong><p>{run.id.toLowerCase()}.json · Redacted run metadata and normalized trace</p></div><button className="button button--light" type="button" onClick={() => downloadJSON(`${run.id.toLowerCase()}.json`, run)}><Download size={15} /> Download</button></div>
       <div className="artifact-row"><FileJson size={24} /><div><strong>Decision trace</strong><p>{run.id.toLowerCase()}-trace.json · All {run.events.length} recorded actions</p></div><button className="button button--light" type="button" onClick={exportTrace}><Download size={15} /> Download</button></div></div>
   </Panel>;
 }

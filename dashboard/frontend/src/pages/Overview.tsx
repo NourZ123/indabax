@@ -10,7 +10,7 @@ function lastSevenDays(runs: Run[]): { label: string; allow: number; block: numb
     const day = new Date(end); day.setDate(end.getDate() - (WEEKDAYS - idx - 1));
     const next = new Date(day); next.setDate(next.getDate() + 1);
     const events = runs.flatMap((run) => run.events.filter((event) => {
-      const value = new Date(event.occurredAt).getTime(); return value >= day.getTime() && value < next.getTime();
+      const value = new Date(run.createdAt).getTime(); return value >= day.getTime() && value < next.getTime();
     }));
     return { label: day.toLocaleDateString(undefined, { weekday: 'short' }), ...countByDecision(events) };
   });
@@ -30,11 +30,11 @@ export function OverviewPage({ runs }: { runs: Run[] }) {
       <MetricCard label="Recorded runs" value={runs.length} icon={Clock3} description="Within selected time range" />
       <MetricCard label="Allowed actions" value={counts.allow} icon={ShieldCheck} color="var(--allowed)" description="Actions permitted unchanged" />
       <MetricCard label="Blocked actions" value={counts.block} icon={ShieldX} color="var(--blocked)" description="Actions prevented" />
-      <MetricCard label="Attack runs stopped" value={attackRuns.length > 0 ? `${stopped} / ${attackRuns.length}` : '—'} color="var(--text-primary)" description="Only runs with recorded outcomes" />
+      <MetricCard label="Attacks failed" value={attackRuns.length > 0 ? `${stopped} / ${attackRuns.length}` : '—'} color="var(--text-primary)" description="Only runs with recorded outcomes" />
     </div>
     <div className="overview-main-grid">
-      <Panel title="Decision activity" action={<span className="panel-meta">Last seven calendar days</span>}>
-        <p className="panel-subtitle">Recorded decisions by day. An action is counted when the defense made its decision.</p>
+      <Panel title="Decision activity" action={<span className="panel-meta">Last seven save dates</span>}>
+        <p className="panel-subtitle">Decisions grouped by when their run artifact was saved (simulator event timestamps use a logical clock).</p>
         <div className="activity-chart" role="img" aria-label="Stacked bars showing action decisions over the last seven days">
           {activity.map((day, idx) => <div className="activity-column" key={idx}>
             <div className="activity-bar" title={`${day.label}: ${day.allow} allowed, ${day.block} blocked, ${day.escalate} escalated, ${day.rewrite} rewritten`}>

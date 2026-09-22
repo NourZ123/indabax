@@ -1,7 +1,7 @@
 export type Decision = 'allow' | 'block' | 'escalate' | 'rewrite';
 export type DisplayStatus = Decision | 'completed' | 'online' | 'offline';
-export type Domain = 'enterprise' | 'finance' | 'soc';
-export type RunOutcome = 'attack_blocked' | 'attack_succeeded' | 'task_completed' | 'task_incomplete';
+export type Domain = 'enterprise' | 'finance' | 'soc' | 'unknown';
+export type RunOutcome = 'attack_blocked' | 'attack_succeeded' | 'task_completed' | 'task_incomplete' | 'attack_failed' | 'not_evaluated';
 export type Severity = 'low' | 'medium' | 'high' | 'critical';
 export type SignalName = 'Information flow' | 'Injection' | 'Goal alignment' | 'Policy' | 'History';
 
@@ -17,6 +17,7 @@ export interface ProvenanceRecord {
 export interface TraceEvent {
   id: string;
   index: number;
+  stepId?: number; // Original simulator step_id when available
   occurredAt: string;
   description: string;
   tool: string;
@@ -41,7 +42,7 @@ export interface Run {
   createdAt: string;
   model: string;
   defenseVersion: string;
-  durationMs: number;
+  durationMs: number | null;
   userGoal: string;
   summary: string;
   outcome: RunOutcome;
@@ -50,6 +51,7 @@ export interface Run {
   criticalViolation: boolean | null;
   dataFlowViolation: boolean | null;
   events: TraceEvent[];
+  effectivePolicy?: { profile: string; allowedTools: string[]; forbiddenEffects: string[] } | null;
 }
 
 export interface PolicyTool {
@@ -91,7 +93,7 @@ export interface Experiment {
   criticalViolationRate: number | null;
   falseBlockRate: number | null;
   unnecessaryEscalationRate: number | null;
-  averageLatencyMs: number | null;
+  medianLatencyMs: number | null;
 }
 
 export interface DashboardData {

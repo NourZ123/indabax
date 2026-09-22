@@ -12,10 +12,11 @@ export function StatusDot({ status, label, className = '' }: { status: DisplaySt
   return <span className={`status status--${status} ${className}`}><span className="status__dot" aria-hidden="true" />{label ?? LABELS[status]}</span>;
 }
 
-export function Outcome({ outcome }: { outcome: 'attack_blocked' | 'attack_succeeded' | 'task_completed' | 'task_incomplete' }) {
+export function Outcome({ outcome }: { outcome: 'attack_blocked' | 'attack_succeeded' | 'task_completed' | 'task_incomplete' | 'attack_failed' | 'not_evaluated' }) {
   const map = {
     attack_blocked: ['block', 'Attack blocked'], attack_succeeded: ['block', 'Attack succeeded'],
     task_completed: ['completed', 'Task completed'], task_incomplete: ['escalate', 'Task incomplete'],
+    attack_failed: ['completed', 'Attack failed'], not_evaluated: ['offline', 'Not evaluated'],
   } as const;
   const [status, label] = map[outcome];
   return <StatusDot status={status} label={label} />;
