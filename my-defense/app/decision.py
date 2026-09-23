@@ -187,7 +187,8 @@ def _decide_tool_call(action: CandidateAction, request: DefenseRequest) -> Defen
     if impact_level == "low" and risk < 0.2:
         codes.append(reason_codes.LOW_RISK_READ)
 
-    return DefenseDecision(decision="allow", risk_score=risk, confidence=confidence, reason_codes=_dedupe(codes), metadata=metadata)
+    return DefenseDecision(decision="allow", risk_score=risk, confidence=confidence,
+                           reason_codes=_dedupe(codes), metadata=metadata)
 
 
 # ---- memory_write ---------------------------------------------------------------------------
@@ -216,12 +217,14 @@ def _decide_memory_write(action: CandidateAction, request: DefenseRequest) -> De
     memory_score = 0.0
     if untrusted_source and claims:
         memory_score = 0.9
-        codes += [reason_codes.AUTHORITY_MISMATCH, reason_codes.UNTRUSTED_MEMORY_SOURCE, reason_codes.MEMORY_POISONING_RISK]
+        codes += [reason_codes.AUTHORITY_MISMATCH,
+                  reason_codes.UNTRUSTED_MEMORY_SOURCE, reason_codes.MEMORY_POISONING_RISK]
     elif untrusted_source:
         memory_score = 0.15
         codes.append(reason_codes.UNTRUSTED_MEMORY_SOURCE)
 
-    flow = information_flow.evaluate(action, request) if config.ENABLE_INFORMATION_FLOW else information_flow.DataFlowResult()
+    flow = information_flow.evaluate(
+        action, request) if config.ENABLE_INFORMATION_FLOW else information_flow.DataFlowResult()
     codes += flow.reason_codes
 
     risk = risk_mod.aggregate(risk_mod.BASE_RISK, {"memory": memory_score, "data_flow": flow.score})
@@ -248,7 +251,8 @@ def _decide_memory_write(action: CandidateAction, request: DefenseRequest) -> De
 
 
 def _decide_respond(action: CandidateAction, request: DefenseRequest) -> DefenseDecision:
-    flow = information_flow.evaluate(action, request) if config.ENABLE_INFORMATION_FLOW else information_flow.DataFlowResult()
+    flow = information_flow.evaluate(
+        action, request) if config.ENABLE_INFORMATION_FLOW else information_flow.DataFlowResult()
     risk = risk_mod.aggregate(risk_mod.BASE_RISK, {"data_flow": flow.score})
     confidence = flow.confidence if flow.score > 0 else 0.5
     metadata = {"data_flow": {"score": flow.score, "sink": flow.sink, "destination_trust": flow.destination_trust}}
@@ -309,4 +313,5 @@ def _decide_request_confirmation(action: CandidateAction, request: DefenseReques
     if risk >= risk_mod.BLOCK_THRESHOLD:
         return DefenseDecision(decision="block", risk_score=risk, confidence=confidence, reason_codes=_dedupe(codes), metadata=metadata)
 
-    return DefenseDecision(decision="allow", risk_score=risk, confidence=confidence, reason_codes=_dedupe(codes), metadata=metadata)
+    return DefenseDecision(decision="allow", risk_score=risk, confidence=confidence,
+                           reason_codes=_dedupe(codes), metadata=metadata)

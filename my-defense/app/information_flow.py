@@ -18,8 +18,11 @@ from app import reason_codes, signals
 from app.models import CandidateAction, DefenseRequest
 from app.tool_profiles import profile_for
 
-SENSITIVE_MARKERS = ("token", "password", "secret", "secret code", "account_number", "api_key", "apikey", "credential")
-
+SENSITIVE_MARKERS = (
+    "token", "password", "secret", "secret code", "account_number", "api_key", "apikey", "credential",
+    "recovery key", "passphrase", "private key", "access code", "pin code", "security code",
+    "auth code", "verification code", "master key",
+)
 # Known official record-id prefixes (see src/sentinel/domains/*/tools.py insert() calls and
 # args_model patterns) plus a couple of generic fixture-entity prefixes -- excluded so normal
 # business identifiers are never mistaken for secrets.
@@ -165,16 +168,16 @@ def evaluate(action: CandidateAction, request: DefenseRequest) -> DataFlowResult
         details["matched_values"] = len(matched_values)
         details["encoding"] = encoding
     elif encoded_generic:
-        score = 0.6 if sink.external else 0.3
-        confidence = 0.55
+        score = 0.85 if sink.external else 0.35
+        confidence = 0.7
         codes.append(reason_codes.ENCODED_SECRET_DETECTED)
     elif secretish and marker:
-        score = 0.55 if sink.external else 0.25
-        confidence = 0.5
+        score = 0.85 if sink.external else 0.3
+        confidence = 0.65
         codes.append(reason_codes.SECRET_TO_EXTERNAL_SINK if sink.external else reason_codes.SENSITIVE_DATA_FLOW)
     elif secretish or marker:
-        score = 0.25 if sink.external else 0.12
-        confidence = 0.35
+        score = 0.45 if sink.external else 0.12
+        confidence = 0.5
         codes.append(reason_codes.SENSITIVE_DATA_FLOW)
 
     return DataFlowResult(

@@ -72,7 +72,7 @@ def contains_encoded_secret_marker(text: str) -> bool:
                 return True
         except Exception:
             pass
-    for cand in re.findall(r"[0-9a-fA-F]{32,256}", hay):
+    for cand in re.findall(r"[0-9a-fA-F]{16,256}", hay):
         if len(cand) % 2 != 0:
             continue
         try:
